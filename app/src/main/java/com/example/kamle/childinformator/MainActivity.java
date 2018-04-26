@@ -45,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
         return spinner;
     }
 
-    private void createTxtFile(String name, String surname, int age, String content) throws IOException {
+    private String createTxtFile(String name, String surname, int age, String content) throws IOException {
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 
             ActivityCompat.requestPermissions(this,
@@ -54,19 +54,20 @@ public class MainActivity extends AppCompatActivity {
             Log.e("MyLog, zapytano", "tak, zapytano");
         }
 
+        File root = null, file = null;
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 
             TextView statusBar = (TextView) findViewById(R.id.statusBar);
             statusBar.setText("Nie przyznano pozwolenia - nie można dodać");
             statusBar.setBackgroundColor(Color.RED);
         } else {
-            File root = new File(Environment.getExternalStorageDirectory(), "childInfo");
+            root = new File(Environment.getExternalStorageDirectory(), "childInfo");
             Log.e("MyLog, path", String.valueOf(root.getAbsolutePath()));
             if (!root.exists()) {
                 root.mkdirs();
                 root.createNewFile();
             }
-            File file = new File(root, name + "_" + surname + ".txt");
+            file = new File(root, name + "_" + surname + ".txt");
             Log.e("MyLog, imie_nazw", name + "_" + surname);
             FileWriter writer = new FileWriter(file);
             writer.write("Imie: "+name+"\nNazwisko: "+surname+"\nWiek: "+age+"\nDodatkowe informacje:\n"+content);
@@ -74,6 +75,8 @@ public class MainActivity extends AppCompatActivity {
             writer.close();
             Toast.makeText(this, "Zapisano", Toast.LENGTH_SHORT).show();
         }
+        String path = root.getAbsolutePath() + "/" + file.getName();
+        return path;
 
     }
 
@@ -81,6 +84,7 @@ public class MainActivity extends AppCompatActivity {
         Cursor cursor = sqLiteDatabase.rawQuery("select * from children;", null);
         String namesInDB[] = new String[cursor.getCount()];
         String surnamesInDB[] = new String[cursor.getCount()];
+        String pathsInDB[] = new String[cursor.getCount()];
         int i=0;
         if(cursor.getCount() > 0)
         {
@@ -88,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
             do {
                 namesInDB[i] = cursor.getString(cursor.getColumnIndex("name"));
                 surnamesInDB[i] = cursor.getString(cursor.getColumnIndex("surname"));
+                pathsInDB[i] = cursor.getString(cursor.getColumnIndex("path"));
                 ++i;
             } while(cursor.moveToNext());
             cursor.close();
@@ -103,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     editName.setEnabled(false);
                     editSurname.setEnabled(false);
-                    showChildInfo(name, surname);
+                    showChildInfo(name, surname, pathsInDB[j]);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -134,8 +139,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 try {
-                    createTxtFile(name, surname, age, addChildInfo.getText().toString());
-                    sqLiteDatabase.execSQL("INSERT INTO children(name, surname, age) VALUES ('"+name+"','"+surname+"','"+age+"');");
+                    String path = createTxtFile(name, surname, age, addChildInfo.getText().toString());
+                    sqLiteDatabase.execSQL("INSERT INTO children(name, surname, age, path) VALUES ('"+name+"','"+surname+"','"+age+"','"+path+"');");
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
@@ -149,13 +154,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void showChildInfo(String name, String surname) throws IOException {
+    private void showChildInfo(String name, String surname, String path) throws IOException {
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
                     MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
-            Log.e("MyLog, zapytano", "tak, zapytano");
         }
 
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
@@ -164,9 +168,10 @@ public class MainActivity extends AppCompatActivity {
             statusBar.setText("Nie przyznano pozwolenia - nie można odczytać informacji");
             statusBar.setBackgroundColor(Color.RED);
         } else {
-            File root = new File(Environment.getExternalStorageDirectory(), "childInfo");
-            Log.e("MyLog, path", String.valueOf(root.getAbsolutePath()));
-            File file = new File(root, name+"_"+surname+".txt");
+//            File root = new File(Environment.getExternalStorageDirectory(), "childInfo");
+//            Log.e("MyLog, path", String.valueOf(root.getAbsolutePath()));
+//            File file = new File(root, name+"_"+surname+".txt");
+            File file = new File(path);
             StringBuilder sb = new StringBuilder();
             BufferedReader br = new BufferedReader(new FileReader(file));
             String line;
@@ -240,7 +245,8 @@ public class MainActivity extends AppCompatActivity {
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
                     "name TEXT," +
                     "surname TEXT," +
-                    "age INTEGER);");
+                    "age INTEGER,"+
+                    "path TEXT);");
             statusBar.setText("Pomyślnie połączono z bazą danych!");
         } catch (SQLException e) {
             statusBar.setText("Błąd" + e.getMessage());
