@@ -57,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
         File root = null, file = null;
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 
+            Log.e("MyLog", "zapytano - nie przyznano");
             TextView statusBar = (TextView) findViewById(R.id.statusBar);
             statusBar.setText("Nie przyznano pozwolenia - nie można dodać");
             statusBar.setBackgroundColor(Color.RED);
@@ -150,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
                     i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
                     startActivity(i);
                 }
-                
+
             }
         });
     }
@@ -211,6 +212,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
 
         editName = (EditText) findViewById(R.id.name);
         editSurname = (EditText) findViewById(R.id.surname);
